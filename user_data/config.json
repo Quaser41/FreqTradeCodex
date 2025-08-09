@@ -1,0 +1,37 @@
+{
+  "max_open_trades": 3,
+  "stake_currency": "USDT",
+  "stake_amount": "unlimited",
+  "fiat_display_currency": "USD",
+  "dry_run": true,
+  "dry_run_wallet": 1000,
+  "tradable_balance_ratio": 0.75,
+  "timeframe": "5m",
+  "exchange": {
+    "name": "kraken",
+    "key": "",
+    "secret": "",
+    "ccxt_config": { "enableRateLimit": true },
+    "ccxt_async_config": { "enableRateLimit": true }
+  },
+  "pairlists": [
+    {
+      "method": "StaticPairList",
+      "pairs": [
+        "BTC/USDT",
+        "ETH/USDT",
+        "SOL/USDT"
+      ]
+    }
+  ],
+  "telegram": { "enabled": false },
+  "api_server": { "enabled": false },
+  "unfilledtimeout": {
+    "buy": 10,
+    "sell": 10
+  },
+  "disable_dataframe_checks": true,
+  "dataformat_ohlcv": "json",
+  "dry_run_ticker_interval": "5m",
+  "loglevel": "info"
+}
