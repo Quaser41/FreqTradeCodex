@@ -1,5 +1,6 @@
 import copy
 import logging
+import uuid
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from random import randint
@@ -1052,6 +1053,7 @@ def test_create_dry_run_order(default_conf, mocker, side, exchange_name, leverag
     )
     assert "id" in order
     assert f"dry_run_{side}_" in order["id"]
+    uuid.UUID(order["id"].rsplit("_", 1)[-1])
     assert order["side"] == side
     assert order["type"] == "limit"
     assert order["symbol"] == "ETH/BTC"

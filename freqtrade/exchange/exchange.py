@@ -7,6 +7,7 @@ import asyncio
 import inspect
 import logging
 import signal
+import uuid
 from collections.abc import Coroutine, Generator
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
@@ -1075,7 +1076,7 @@ class Exchange:
         stop_loss: bool = False,
     ) -> CcxtOrder:
         now = dt_now()
-        order_id = f"dry_run_{side}_{pair}_{now.timestamp()}"
+        order_id = f"dry_run_{side}_{pair}_{uuid.uuid4()}"
         # Rounding here must respect to contract sizes
         _amount = self._contracts_to_amount(
             pair, self.amount_to_precision(pair, self._amount_to_contracts(pair, amount))
