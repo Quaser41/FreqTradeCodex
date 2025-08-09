@@ -2359,14 +2359,18 @@ class FreqtradeBot(LoggingMixin):
                 or self.margin_mode == MarginMode.CROSS
             ):
                 # Must also run for partial exits
-                # TODO: Margin will need to use interest_rate as well.
-                # interest_rate = self.exchange.get_interest_rate()
+                interest_rate = 0.0
+                try:
+                    interest_rate = self.exchange.get_interest_rate()
+                except Exception:
+                    logger.debug("Interest rate not available from exchange, defaulting to 0.0")
                 update_liquidation_prices(
                     trade,
                     exchange=self.exchange,
                     wallets=self.wallets,
                     stake_currency=self.config["stake_currency"],
                     dry_run=self.config["dry_run"],
+                    interest_rate=interest_rate,
                 )
             if self.strategy.use_custom_stoploss and trade.is_open:
                 current_rate = self.exchange.get_rate(

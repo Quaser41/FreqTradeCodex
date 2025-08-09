@@ -17,6 +17,7 @@ def update_liquidation_prices(
     wallets: Wallets,
     stake_currency: str,
     dry_run: bool = False,
+    interest_rate: float = 0.0,
 ):
     """
     Update trade liquidation price in isolated margin mode.
@@ -50,6 +51,7 @@ def update_liquidation_prices(
                         )
                     )
         elif trade:
+            trade.interest_rate = interest_rate
             trade.set_liquidation_price(
                 exchange.get_liquidation_price(
                     pair=trade.pair,
