@@ -8,9 +8,7 @@
   "tradable_balance_ratio": 0.75,
   "timeframe": "5m",
   "exchange": {
-    "name": "binance",
-    "key": "REPLACE_WITH_YOUR_API_KEY",
-    "secret": "REPLACE_WITH_YOUR_API_SECRET",
+    "name": "kucoin",
     "ccxt_config": { "enableRateLimit": true },
     "ccxt_async_config": { "enableRateLimit": true }
   },
@@ -28,6 +26,12 @@
   "unfilledtimeout": {
     "buy": 10,
     "sell": 10
+  },
+  "external_message_consumer": {
+    "enabled": true,
+    "producers": [
+      {"name": "cryptofeed", "url": "ws://localhost:9000"}
+    ]
   },
   "disable_dataframe_checks": true,
   "dataformat_ohlcv": "json",
