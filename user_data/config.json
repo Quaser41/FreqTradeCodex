@@ -8,9 +8,9 @@
   "tradable_balance_ratio": 0.75,
   "timeframe": "5m",
   "exchange": {
-    "name": "kraken",
-    "key": "",
-    "secret": "",
+    "name": "binance",
+    "key": "REPLACE_WITH_YOUR_API_KEY",
+    "secret": "REPLACE_WITH_YOUR_API_SECRET",
     "ccxt_config": { "enableRateLimit": true },
     "ccxt_async_config": { "enableRateLimit": true }
   },
@@ -19,8 +19,7 @@
       "method": "StaticPairList",
       "pairs": [
         "BTC/USDT",
-        "ETH/USDT",
-        "SOL/USDT"
+        "ETH/USDT"
       ]
     }
   ],
