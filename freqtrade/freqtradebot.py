@@ -394,17 +394,22 @@ class FreqtradeBot(LoggingMixin):
         Updates open orders based on order list kept in the database.
         Mainly updates the state of orders - but may also close trades
         """
-        if self.config["dry_run"] or self.config["exchange"].get("skip_open_order_update", False):
-            # Updating open orders in dry-run does not make sense and will fail.
+        if self.config["exchange"].get("skip_open_order_update", False):
             return
 
         orders = Order.get_open_orders()
         logger.info(f"Updating {len(orders)} open orders.")
         for order in orders:
             try:
-                fo = self.exchange.fetch_order_or_stoploss_order(
-                    order.order_id, order.ft_pair, order.ft_order_side == "stoploss"
-                )
+                if self.config["dry_run"]:
+                    fo = self.exchange.fetch_dry_run_order(order.order_id)
+                    if not fo.get("fee"):
+                        taker_or_maker = "taker" if fo.get("type") == "market" else "maker"
+                        fo = self.exchange.add_dry_order_fee(order.ft_pair, fo, taker_or_maker)
+                else:
+                    fo = self.exchange.fetch_order_or_stoploss_order(
+                        order.order_id, order.ft_pair, order.ft_order_side == "stoploss"
+                    )
                 if not order.trade:
                     # This should not happen, but it does if trades were deleted manually.
                     # This can only incur on sqlite, which doesn't enforce foreign constraints.
@@ -441,10 +446,6 @@ class FreqtradeBot(LoggingMixin):
         Update closed trades without close fees assigned.
         Only acts when Orders are in the database, otherwise the last order-id is unknown.
         """
-        if self.config["dry_run"]:
-            # Updating open orders in dry-run does not make sense and will fail.
-            return
-
         trades: list[Trade] = Trade.get_closed_trades_without_assigned_fees()
         for trade in trades:
             if not trade.is_open and not trade.fee_updated(trade.exit_side):
@@ -457,9 +458,16 @@ class FreqtradeBot(LoggingMixin):
                         f"Updating {trade.exit_side}-fee on trade {trade} "
                         f"for order {order.order_id}."
                     )
+                    fo = None
+                    if self.config["dry_run"]:
+                        fo = self.exchange.fetch_dry_run_order(order.order_id)
+                        if not fo.get("fee"):
+                            taker_or_maker = "taker" if fo.get("type") == "market" else "maker"
+                            fo = self.exchange.add_dry_order_fee(trade.pair, fo, taker_or_maker)
                     self.update_trade_state(
                         trade,
                         order.order_id,
+                        fo,
                         stoploss_order=order.ft_order_side == "stoploss",
                         send_msg=False,
                     )
@@ -475,7 +483,19 @@ class FreqtradeBot(LoggingMixin):
                             f"Updating {trade.entry_side}-fee on trade {trade} "
                             f"for order {order.order_id}."
                         )
-                        self.update_trade_state(trade, order.order_id, send_msg=False)
+                        fo = None
+                        if self.config["dry_run"]:
+                            fo = self.exchange.fetch_dry_run_order(order.order_id)
+                            if not fo.get("fee"):
+                                taker_or_maker = (
+                                    "taker" if fo.get("type") == "market" else "maker"
+                                )
+                                fo = self.exchange.add_dry_order_fee(
+                                    trade.pair, fo, taker_or_maker
+                                )
+                        self.update_trade_state(
+                            trade, order.order_id, fo, send_msg=False
+                        )
 
     def handle_insufficient_funds(self, trade: Trade):
         """

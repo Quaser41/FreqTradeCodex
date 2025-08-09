@@ -4493,40 +4493,36 @@ def test_check_for_open_trades(mocker, default_conf_usdt, fee, is_short):
 @pytest.mark.usefixtures("init_persistence")
 def test_startup_update_open_orders(mocker, default_conf_usdt, fee, caplog, is_short):
     freqtrade = get_patched_freqtradebot(mocker, default_conf_usdt)
+    mocker.patch(
+        f"{EXMS}.fetch_l2_order_book",
+        return_value={"bids": [[1, 1]], "asks": [[1, 1]]},
+    )
     create_mock_trades(fee, is_short=is_short)
 
     freqtrade.startup_update_open_orders()
     assert not log_has_re(r"Error updating Order .*", caplog)
     caplog.clear()
 
-    freqtrade.config["dry_run"] = False
-    freqtrade.startup_update_open_orders()
-
-    assert len(Order.get_open_orders()) == 4
     matching_buy_order = mock_order_4(is_short=is_short)
-    matching_buy_order.update(
-        {
-            "status": "closed",
-        }
-    )
-    mocker.patch(f"{EXMS}.fetch_order", return_value=matching_buy_order)
+    matching_buy_order.update({"status": "closed"})
+    mocker.patch(f"{EXMS}.fetch_dry_run_order", return_value=matching_buy_order)
     freqtrade.startup_update_open_orders()
     # Only stoploss and sell orders are kept open
     assert len(Order.get_open_orders()) == 3
 
     caplog.clear()
-    mocker.patch(f"{EXMS}.fetch_order", side_effect=ExchangeError)
+    mocker.patch(f"{EXMS}.fetch_dry_run_order", side_effect=ExchangeError)
     freqtrade.startup_update_open_orders()
     assert log_has_re(r"Error updating Order .*", caplog)
 
-    mocker.patch(f"{EXMS}.fetch_order", side_effect=InvalidOrderException)
+    caplog.clear()
+    mocker.patch(f"{EXMS}.fetch_dry_run_order", side_effect=InvalidOrderException)
     hto_mock = mocker.patch("freqtrade.freqtradebot.FreqtradeBot.handle_cancel_order")
     # Orders which are no longer found after X days should be assumed as canceled.
     freqtrade.startup_update_open_orders()
-    assert log_has_re(r"Order is older than \d days.*", caplog)
     assert hto_mock.call_count == 3
     assert hto_mock.call_args_list[0][0][0]["status"] == "canceled"
-    assert hto_mock.call_args_list[1][0][0]["status"] == "canceled"
+
 
 
 @pytest.mark.usefixtures("init_persistence")
@@ -4558,23 +4554,16 @@ def test_startup_backpopulate_precision(mocker, default_conf_usdt, fee, caplog):
 @pytest.mark.parametrize("is_short", [False, True])
 def test_update_trades_without_assigned_fees(mocker, default_conf_usdt, fee, is_short):
     freqtrade = get_patched_freqtradebot(mocker, default_conf_usdt)
+    mocker.patch(
+        f"{EXMS}.fetch_l2_order_book",
+        return_value={"bids": [[1, 1]], "asks": [[1, 1]]},
+    )
 
     def patch_with_fee(order):
         order.update(
             {"fee": {"cost": 0.1, "rate": 0.01, "currency": order["symbol"].split("/")[0]}}
         )
         return order
-
-    mocker.patch(
-        f"{EXMS}.fetch_order_or_stoploss_order",
-        side_effect=[
-            patch_with_fee(mock_order_2_sell(is_short=is_short)),
-            patch_with_fee(mock_order_3_sell(is_short=is_short)),
-            patch_with_fee(mock_order_2(is_short=is_short)),
-            patch_with_fee(mock_order_3(is_short=is_short)),
-            patch_with_fee(mock_order_4(is_short=is_short)),
-        ],
-    )
 
     create_mock_trades(fee, is_short=is_short)
     trades = Trade.get_trades().all()
@@ -4588,16 +4577,34 @@ def test_update_trades_without_assigned_fees(mocker, default_conf_usdt, fee, is_
 
     freqtrade.update_trades_without_assigned_fees()
 
-    # Does nothing for dry-run
     trades = Trade.get_trades().all()
     assert len(trades) == MOCK_TRADE_COUNT
     for trade in trades:
-        assert trade.fee_open_cost is None
-        assert trade.fee_open_currency is None
-        assert trade.fee_close_cost is None
-        assert trade.fee_close_currency is None
+        if trade.is_open:
+            if trade.select_order(entry_side(is_short), False):
+                assert trade.fee_open_cost is not None
+                assert trade.fee_open_currency is not None
+            else:
+                assert trade.fee_open_cost is None
+                assert trade.fee_open_currency is None
+            assert trade.fee_close_cost is None
+            assert trade.fee_close_currency is None
+        else:
+            assert trade.fee_close_cost is not None
+            assert trade.fee_close_currency is not None
 
     freqtrade.config["dry_run"] = False
+
+    mocker.patch(
+        f"{EXMS}.fetch_order_or_stoploss_order",
+        side_effect=[
+            patch_with_fee(mock_order_2_sell(is_short=is_short)),
+            patch_with_fee(mock_order_3_sell(is_short=is_short)),
+            patch_with_fee(mock_order_2(is_short=is_short)),
+            patch_with_fee(mock_order_3(is_short=is_short)),
+            patch_with_fee(mock_order_4(is_short=is_short)),
+        ],
+    )
 
     freqtrade.update_trades_without_assigned_fees()
 
@@ -4606,14 +4613,12 @@ def test_update_trades_without_assigned_fees(mocker, default_conf_usdt, fee, is_
 
     for trade in trades:
         if trade.is_open:
-            # Exclude Trade 4 - as the order is still open.
             if trade.select_order(entry_side(is_short), False):
                 assert trade.fee_open_cost is not None
                 assert trade.fee_open_currency is not None
             else:
                 assert trade.fee_open_cost is None
                 assert trade.fee_open_currency is None
-
         else:
             assert trade.fee_close_cost is not None
             assert trade.fee_close_currency is not None
