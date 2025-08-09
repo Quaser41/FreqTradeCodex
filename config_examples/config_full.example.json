@@ -164,20 +164,10 @@
         "ws_token": "secret_ws_t0ken."
     },
     "external_message_consumer": {
-        "enabled": false,
+        "enabled": true,
         "producers": [
-          {
-            "name": "default",
-            "host": "127.0.0.2",
-            "port": 8080,
-            "ws_token": "secret_ws_t0ken."
-          }
-        ],
-        "wait_timeout": 300,
-        "ping_timeout": 10,
-        "sleep_time": 10,
-        "remove_entry_exit_signals": false,
-        "message_size_limit": 8
+          {"name": "cryptofeed", "url": "ws://localhost:9000"}
+        ]
     },
     "bot_name": "freqtrade",
     "db_url": "sqlite:///tradesv3.sqlite",
