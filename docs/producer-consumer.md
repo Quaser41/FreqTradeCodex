@@ -57,6 +57,30 @@ Instead of (or as well as) calculating indicators in `populate_indicators()` the
 
 A consumer instance will then have a full copy of the analyzed dataframes without the need to calculate them itself.
 
+## Cryptofeed adapter
+
+In addition to reusing data from another Freqtrade bot you can also feed
+real-time market information into the consumer via the `cryptofeed` adapter.
+The adapter subscribes to public websocket channels of several exchanges
+and exposes the aggregated trade and ticker stream over a small websocket
+server.  Supported exchanges are **KuCoin, OKX, Kraken, Bybit and Bitfinex**.
+
+Start the adapter with::
+
+    python -m freqtrade.datafeeds.cryptofeed_adapter --pairs BTC-USDT,ETH-USDT
+
+By default the server listens on ``ws://localhost:9000`` and subscribes to
+the provided comma separated list of symbols.  Configure your Freqtrade
+instance to consume these messages by enabling `external_message_consumer`
+and pointing it to the adapter::
+
+    "external_message_consumer": {
+        "enabled": true,
+        "producers": [
+            {"name": "cryptofeed", "url": "ws://localhost:9000"}
+        ]
+    }
+
 ## Examples
 
 ### Example - Producer Strategy
