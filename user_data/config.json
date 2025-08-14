@@ -70,24 +70,23 @@
         "exit": "GTC"
     },
     "pairlists": [
-        {"method": "StaticPairList"},
-        {"method": "FullTradesFilter"},
         {
-            "method": "VolumePairList",
+            "method": "RemotePairList",
+            "mode": "whitelist",
+            "pairlist_url": "https://example.com/trending-pairs.json",
             "number_assets": 20,
-            "sort_key": "quoteVolume",
             "refresh_period": 1800
+        },
+        {
+            "method": "PercentChangePairList",
+            "number_assets": 10,
+            "min_value": 5,
+            "sort_direction": "desc"
         },
         {"method": "AgeFilter", "min_days_listed": 10},
         {"method": "PrecisionFilter"},
         {"method": "PriceFilter", "low_price_ratio": 0.01, "min_price": 0.00000010},
-        {"method": "SpreadFilter", "max_spread_ratio": 0.005},
-        {
-            "method": "RangeStabilityFilter",
-            "lookback_days": 10,
-            "min_rate_of_change": 0.01,
-            "refresh_period": 1440
-        }
+        {"method": "SpreadFilter", "max_spread_ratio": 0.005}
     ],
     "exchange": {
         "name": "binanceus",
@@ -97,13 +96,6 @@
         "log_responses": false,
         "ccxt_config": {},
         "ccxt_async_config": {},
-        "pair_whitelist": [
-            "BTC/USDT",
-            "ETH/USDT",
-            "LTC/USDT",
-            "BCH/USDT",
-            "ADA/USDT"
-        ],
         "pair_blacklist": [
             "DOGE/USDT"
         ],
