@@ -7,6 +7,10 @@ set "PYTHON=.venv\Scripts\python.exe"
 
 "%PYTHON%" -m pip install --upgrade pip
 "%PYTHON%" -m pip install -r requirements.txt
-"%PYTHON%" -m freqtrade %*
+if "%~1"=="" (
+    "%PYTHON%" -m freqtrade trade
+) else (
+    "%PYTHON%" -m freqtrade %*
+)
 
 pause
