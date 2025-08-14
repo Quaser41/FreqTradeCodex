@@ -61,6 +61,7 @@ def test_gen_pairlist_with_local_file(mocker, rpl_config):
 def test_fetch_pairlist_mock_response_html(mocker, rpl_config):
     mock_response = MagicMock()
     mock_response.headers = {"content-type": "text/html"}
+    mock_response.json.side_effect = ValueError("No JSON object could be decoded")
 
     rpl_config["pairlists"] = [
         {
@@ -82,7 +83,7 @@ def test_fetch_pairlist_mock_response_html(mocker, rpl_config):
         exchange, pairlistmanager, rpl_config, rpl_config["pairlists"][0], 0
     )
 
-    with pytest.raises(OperationalException, match="RemotePairList is not of type JSON."):
+    with pytest.raises(OperationalException, match="RemotePairList returned invalid JSON"):
         remote_pairlist.fetch_pairlist()
 
 
@@ -156,7 +157,7 @@ def test_remote_pairlist_init_no_number_assets(mocker, rpl_config):
         get_patched_freqtradebot(mocker, rpl_config)
 
 
-def test_fetch_pairlist_mock_response_valid(mocker, rpl_config):
+def test_fetch_pairlist_mock_response_text_plain_valid(mocker, rpl_config):
     rpl_config["pairlists"] = [
         {
             "method": "RemotePairList",
@@ -175,7 +176,7 @@ def test_fetch_pairlist_mock_response_valid(mocker, rpl_config):
         "refresh_period": 60,
     }
 
-    mock_response.headers = {"content-type": "application/json"}
+    mock_response.headers = {"content-type": "text/plain"}
 
     mock_response.elapsed.total_seconds.return_value = 0.4
     mocker.patch(

@@ -182,20 +182,19 @@ class RemotePairList(IPairList):
 
         try:
             response = requests.get(self._pairlist_url, headers=headers, timeout=self._read_timeout)
-            content_type = response.headers.get("content-type")
             time_elapsed = response.elapsed.total_seconds()
 
-            if "application/json" in str(content_type):
+            try:
                 jsonparse = response.json()
-
+            except ValueError:
+                pairlist = self._handle_error(
+                    f"RemotePairList returned invalid JSON. {self._pairlist_url}"
+                )
+            else:
                 try:
                     pairlist = self.process_json(jsonparse)
                 except Exception as e:
                     pairlist = self._handle_error(f"Failed processing JSON data: {type(e)}")
-            else:
-                pairlist = self._handle_error(
-                    f"RemotePairList is not of type JSON. {self._pairlist_url}"
-                )
 
         except requests.exceptions.RequestException:
             pairlist = self._handle_error(
