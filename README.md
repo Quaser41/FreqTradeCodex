@@ -23,6 +23,13 @@ expect.
 We strongly recommend you to have coding and Python knowledge. Do not
 hesitate to read the source code and understand the mechanism of this bot.
 
+### No API keys required
+
+The provided `user_data/config.json` enables `dry_run` mode and leaves
+exchange and Telegram credentials empty so you can experiment with the bot
+using only free, public data. Add your own API keys once you're ready for
+live trading.
+
 ## Supported Exchange marketplaces
 
 Please read the [exchange specific notes](docs/exchanges.md) to learn about eventual, special configurations needed for each exchange.

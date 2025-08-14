@@ -1,8 +1,8 @@
 {
     "$schema": "https://schema.freqtrade.io/schema.json",
     "max_open_trades": 3,
-    "stake_currency": "BTC",
-    "stake_amount": 0.05,
+    "stake_currency": "USDT",
+    "stake_amount": 10,
     "tradable_balance_ratio": 0.99,
     "fiat_display_currency": "USD",
     "amount_reserve_percent": 0.05,
@@ -71,27 +71,16 @@
     },
     "pairlists": [
         {
-            "method": "RemotePairList",
-            "mode": "whitelist",
-            "pairlist_url": "https://example.com/trending-pairs.json",
-            "number_assets": 20,
-            "refresh_period": 1800
+            "method": "StaticPairList",
+            "pairs": ["BTC/USDT", "ETH/USDT"]
         },
-        {
-            "method": "PercentChangePairList",
-            "number_assets": 10,
-            "min_value": 5,
-            "sort_direction": "desc"
-        },
-        {"method": "AgeFilter", "min_days_listed": 10},
-        {"method": "PrecisionFilter"},
         {"method": "PriceFilter", "low_price_ratio": 0.01, "min_price": 0.00000010},
         {"method": "SpreadFilter", "max_spread_ratio": 0.005}
     ],
     "exchange": {
         "name": "binanceus",
-        "key": "example_key",
-        "secret": "example_secret",
+        "key": "",
+        "secret": "",
         "password": "",
         "log_responses": false,
         "ccxt_config": {},
@@ -104,8 +93,8 @@
     },
     "telegram": {
         "enabled": false,
-        "token": "your_telegram_token",
-        "chat_id": "your_telegram_chat_id",
+        "token": "",
+        "chat_id": "",
         "notification_settings": {
             "status": "on",
             "warning": "on",
@@ -138,11 +127,11 @@
         "listen_port": 8080,
         "verbosity": "error",
         "enable_openapi": false,
-        "jwt_secret_key": "somethingrandom",
+        "jwt_secret_key": "",
         "CORS_origins": [],
-        "username": "freqtrader",
-        "password": "SuperSecurePassword",
-        "ws_token": "secret_ws_t0ken."
+        "username": "",
+        "password": "",
+        "ws_token": ""
     },
     "external_message_consumer": {
         "enabled": false,
@@ -151,7 +140,7 @@
             "name": "default",
             "host": "127.0.0.2",
             "port": 8080,
-            "ws_token": "secret_ws_t0ken."
+            "ws_token": ""
           }
         ],
         "wait_timeout": 300,
