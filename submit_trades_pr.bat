@@ -12,7 +12,7 @@ cd /d "%~dp0"
 git checkout -B "%BRANCH%" || goto :eof
 
 for %%F in (%FILE_PATTERN%) do (
-    if exist "%%F" git add "%%F"
+    if exist "%%F" git add -f "%%F"
 )
 
 git commit -m "Add tradesv3 dryrun sqlite data" || goto :eof
