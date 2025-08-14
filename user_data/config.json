@@ -2,7 +2,7 @@
     "$schema": "https://schema.freqtrade.io/schema.json",
     "max_open_trades": 3,
     "stake_currency": "USDT",
-    "stake_amount": 10,
+    "stake_amount": "unlimited",
     "tradable_balance_ratio": 0.99,
     "fiat_display_currency": "USD",
     "amount_reserve_percent": 0.05,
@@ -71,8 +71,11 @@
     },
     "pairlists": [
         {
-            "method": "StaticPairList",
-            "pairs": ["BTC/USDT", "ETH/USDT"]
+            "method": "VolumePairList",
+            "number_assets": 20,
+            "sort_key": "quoteVolume",
+            "base_currencies": ["USDT"],
+            "refresh_period": 60
         },
         {"method": "PriceFilter", "low_price_ratio": 0.01, "min_price": 0.00000010},
         {"method": "SpreadFilter", "max_spread_ratio": 0.005}
