@@ -1,4 +1,5 @@
 @echo off
+title FreqTrade
 REM Start Freqtrade main script using local virtual environment
 cd /d "%~dp0"
 
