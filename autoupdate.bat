@@ -5,8 +5,8 @@ cd /d "%~dp0"
 echo Fetching latest changes...
 git fetch --all
 
-git checkout main
-git reset --hard origin/main
+git checkout develop
+git reset --hard origin/develop
 
 echo Rebasing local changes onto remote...
 git pull --rebase
