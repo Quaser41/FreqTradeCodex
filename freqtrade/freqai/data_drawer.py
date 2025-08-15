@@ -1,3 +1,7 @@
+"""FreqAI data drawer utilities."""
+
+# mypy: ignore-errors
+
 import collections
 import importlib
 import logging

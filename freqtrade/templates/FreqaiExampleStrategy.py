@@ -5,7 +5,7 @@ import talib.abstract as ta
 from pandas import DataFrame
 from technical import qtpylib
 
-from freqtrade.strategy import IStrategy
+from freqtrade.strategy import IntParameter, IStrategy
 
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,16 @@ class FreqaiExampleStrategy(IStrategy):
     stoploss = -0.05
     use_exit_signal = True
     # this is the maximum period fed to talib (timeframe independent)
-    startup_candle_count: int = 40
+    _startup_candle_count = IntParameter(20, 50, default=20, space="buy")
+
+    @property
+    def startup_candle_count(self) -> int:
+        return int(self._startup_candle_count.value)
+
+    @startup_candle_count.setter
+    def startup_candle_count(self, value: int) -> None:
+        self._startup_candle_count.value = value
+
     can_short = True
 
     def feature_engineering_expand_all(

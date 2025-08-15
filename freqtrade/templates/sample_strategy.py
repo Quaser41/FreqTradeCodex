@@ -99,7 +99,15 @@ class SampleStrategy(IStrategy):
     exit_short_rsi = IntParameter(low=1, high=50, default=30, space="buy", optimize=True, load=True)
 
     # Number of candles the strategy requires before producing valid signals
-    startup_candle_count: int = 200
+    _startup_candle_count = IntParameter(20, 50, default=20, space="buy")
+
+    @property
+    def startup_candle_count(self) -> int:
+        return int(self._startup_candle_count.value)
+
+    @startup_candle_count.setter
+    def startup_candle_count(self, value: int) -> None:
+        self._startup_candle_count.value = value
 
     # Optional order type mapping.
     order_types = {

@@ -239,12 +239,32 @@ Additional technical libraries can be installed as necessary, or custom indicato
 Some indicators have an unstable startup period in which there isn't enough candle data to calculate any values (NaN), or the calculation is incorrect. This can lead to inconsistencies, since Freqtrade does not know how long this unstable period is and uses whatever indicator values are in the dataframe.
 
 To account for this, the strategy can be assigned the `startup_candle_count` attribute.
+Making this an `IntParameter` allows easy tuning and gives a fast default:
 
-This should be set to the maximum number of candles that the strategy requires to calculate stable indicators. In the case where a user includes higher timeframes with informative pairs, the `startup_candle_count` does not necessarily change. The value is the maximum period (in candles) that any of the informatives timeframes need to compute stable indicators.
+```python
+from freqtrade.strategy import IntParameter, IStrategy
 
-You can use [recursive-analysis](recursive-analysis.md) to check and find the correct `startup_candle_count` to be used. When recursive analysis shows a variance of 0%, then you can be sure that you have enough startup candle data.
+class ExampleStrategy(IStrategy):
+    _startup_candle_count = IntParameter(20, 50, default=20, space="buy")
 
-In this example strategy, this should be set to 400 (`startup_candle_count = 400`), since the minimum needed history for ema100 calculation to make sure the value is correct is 400 candles.
+    @property
+    def startup_candle_count(self) -> int:
+        return int(self._startup_candle_count.value)
+
+    @startup_candle_count.setter
+    def startup_candle_count(self, value: int) -> None:
+        self._startup_candle_count.value = value
+```
+
+The default of 20 candles provides a quick warm-up. Adjust this to the
+maximum number of candles your indicators require to calculate stable values.
+You can use [recursive-analysis](recursive-analysis.md) to check and find the
+correct `startup_candle_count` to be used. When recursive analysis shows a
+variance of 0%, then you can be sure that you have enough startup candle data.
+
+In the following example, this would be set to 400 (`startup_candle_count =
+400`), since the minimum needed history for `ema100` calculation to make sure
+the value is correct is 400 candles.
 
 ``` python
     dataframe['ema100'] = ta.EMA(dataframe, timeperiod=100)

@@ -87,8 +87,16 @@ class FreqaiExampleHybridStrategy(IStrategy):
     process_only_new_candles = True
     stoploss = -0.05
     use_exit_signal = True
-    startup_candle_count: int = 30
+    _startup_candle_count = IntParameter(20, 50, default=20, space="buy")
     can_short = True
+
+    @property
+    def startup_candle_count(self) -> int:
+        return int(self._startup_candle_count.value)
+
+    @startup_candle_count.setter
+    def startup_candle_count(self, value: int) -> None:
+        self._startup_candle_count.value = value
 
     # Hyperoptable parameters
     buy_rsi = IntParameter(low=1, high=50, default=30, space="buy", optimize=True, load=True)
