@@ -44,9 +44,23 @@ class ExchangeWS:
     def cleanup(self) -> None:
         logger.debug("Cleanup called - stopping")
         self._klines_watching.clear()
-        for task in self._background_tasks:
+        tasks = list(self._background_tasks)
+        for task in tasks:
             task.cancel()
+
         if hasattr(self, "_loop") and not self._loop.is_closed():
+            if tasks:
+                async def _wait_tasks() -> None:
+                    await asyncio.gather(*tasks, return_exceptions=True)
+
+                future = asyncio.run_coroutine_threadsafe(
+                    _wait_tasks(),
+                    loop=self._loop,
+                )
+                try:
+                    future.result()
+                except Exception:  # pragma: no cover - should not happen
+                    logger.exception("Exception while awaiting background tasks")
             self.reset_connections()
 
             self._loop.call_soon_threadsafe(self._loop.stop)
@@ -55,6 +69,7 @@ class ExchangeWS:
                 self._loop.close()
 
         self._thread.join()
+        self._background_tasks.clear()
         logger.debug("Stopped")
 
     def reset_connections(self) -> None:
@@ -144,7 +159,9 @@ class ExchangeWS:
             await self._ccxt_object.un_watch_ohlcv_for_symbols([[pair, timeframe]])
         except ccxt.NotSupported as e:
             logger.debug("un_watch_ohlcv_for_symbols not supported: %s", e)
-            pass
+        except ccxt.NetworkError as e:
+            # Connection already closing - no need to escalate
+            logger.debug("NetworkError in _unwatch_ohlcv: %s", e)
         except Exception:
             logger.exception("Exception in _unwatch_ohlcv")
 
