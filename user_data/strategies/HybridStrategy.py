@@ -16,7 +16,7 @@ class HybridStrategy(IStrategy):
     }
     stoploss = -0.10
     process_only_new_candles = True
-    startup_candle_count: int = 200
+    startup_candle_count: int = 50
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe["ema_fast"] = ta.EMA(dataframe, timeperiod=5)
