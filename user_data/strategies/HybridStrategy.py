@@ -34,7 +34,7 @@ class HybridStrategy(IStrategy):
         dataframe.loc[
             (
                 qtpylib.crossed_above(dataframe["ema_fast"], dataframe["ema_slow"])
-                & (dataframe["rsi"] < 30)
+                & (dataframe["rsi"] < 40)
                 & (dataframe["volume"] > dataframe["volume_sma"])
                 & (dataframe["tema"] <= dataframe["bb_middleband"])
                 & (dataframe["tema"] > dataframe["tema"].shift(1))
