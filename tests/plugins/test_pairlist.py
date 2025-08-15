@@ -277,7 +277,7 @@ def test_remove_logs_for_pairs_already_in_blacklist(mocker, markets, static_pl_c
     assert set(whitelist) == set(freqtrade.pairlists.whitelist)
     assert static_pl_conf["exchange"]["pair_blacklist"] == freqtrade.pairlists.blacklist
     # Ensure that log message wasn't generated.
-    assert not log_has("Pair BLK/BTC in your blacklist. Removing it from whitelist...", caplog)
+    assert not log_has("Removed blacklisted pairs from whitelist: BLK/BTC", caplog)
 
     for _ in range(3):
         new_whitelist = freqtrade.pairlists.verify_blacklist(
@@ -285,7 +285,7 @@ def test_remove_logs_for_pairs_already_in_blacklist(mocker, markets, static_pl_c
         )
         # Ensure that the pair is removed from the white list, and properly logged.
         assert set(whitelist) == set(new_whitelist)
-    assert num_log_has("Pair BLK/BTC in your blacklist. Removing it from whitelist...", caplog) == 1
+    assert num_log_has("Removed blacklisted pairs from whitelist: BLK/BTC", caplog) == 1
 
 
 def test_refresh_pairlist_dynamic(mocker, shitcoinmarkets, tickers, whitelist_conf):
@@ -1757,7 +1757,7 @@ def test_spreadfilter_invalid_data(mocker, default_conf, markets, tickers, caplo
     mocker.patch.multiple(EXMS, get_tickers=tickers)
 
     ftbot.pairlists.refresh_pairlist()
-    assert log_has_re(r"Removed .* invalid ticker data.*", caplog)
+    assert log_has_re(r"Removed \d+ pairs from whitelist due to invalid ticker data: .*", caplog)
 
     assert len(ftbot.pairlists.whitelist) == 2
 
