@@ -4,7 +4,7 @@ setlocal
 REM Create a pull request with tradesv3.dryrun sqlite files in this folder
 
 set "BRANCH=trade-sqlite-upload"
-set "BASE=main"
+set "BASE=develop"
 set "FILE_PATTERN=tradesv3.dryrun*.sqlite"
 
 cd /d "%~dp0"
