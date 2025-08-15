@@ -1,15 +1,21 @@
 from datetime import datetime
+from functools import reduce
 
 import pandas_ta as ta
 from pandas import DataFrame
 from technical import qtpylib
 
 from freqtrade.persistence import Trade
-from freqtrade.strategy import IStrategy
+from freqtrade.strategy import BooleanParameter, IntParameter, IStrategy
 
 
 class HybridStrategy(IStrategy):
-    """EMA crossover with RSI, volume, and TEMA/Bollinger confirmations.
+    """EMA crossover with optional RSI, volume, and TEMA/Bollinger confirmations.
+
+    Parameters:
+        rsi_entry: RSI threshold for entries. Default: 50.
+        use_volume_filter: Enable volume moving-average filter. Default: True.
+        use_tema_bband: Require TEMA below Bollinger mid-band and rising. Default: True.
 
     ROI and stoploss are defined within this strategy to keep it self-contained.
     user_data/config.json should not define these parameters.
@@ -28,6 +34,10 @@ class HybridStrategy(IStrategy):
     stoploss = -0.10
     process_only_new_candles = True
     startup_candle_count: int = 50
+
+    rsi_entry = IntParameter(1, 100, default=50)
+    use_volume_filter = BooleanParameter(default=True)
+    use_tema_bband = BooleanParameter(default=True)
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe["ema_fast"] = ta.ema(dataframe["close"], length=5)
@@ -48,16 +58,23 @@ class HybridStrategy(IStrategy):
         return dataframe
 
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        dataframe.loc[
-            (
-                qtpylib.crossed_above(dataframe["ema_fast"], dataframe["ema_slow"])
-                & (dataframe["rsi"] < 40)
-                & (dataframe["volume"] > dataframe["volume_sma"])
-                & (dataframe["tema"] <= dataframe["bb_middleband"])
-                & (dataframe["tema"] > dataframe["tema"].shift(1))
-            ),
-            "enter_long",
-        ] = 1
+        conditions = [
+            qtpylib.crossed_above(dataframe["ema_fast"], dataframe["ema_slow"]),
+            dataframe["rsi"] < self.rsi_entry.value,
+        ]
+
+        if self.use_volume_filter.value:
+            conditions.append(dataframe["volume"] > dataframe["volume_sma"])
+
+        if self.use_tema_bband.value:
+            conditions.append(dataframe["tema"] <= dataframe["bb_middleband"])
+            conditions.append(dataframe["tema"] > dataframe["tema"].shift(1))
+
+        if conditions:
+            dataframe.loc[
+                reduce(lambda x, y: x & y, conditions),
+                "enter_long",
+            ] = 1
         return dataframe
 
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
