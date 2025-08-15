@@ -730,6 +730,21 @@ CONF_SCHEMA = {
                     "description": "Minimum loop duration for one bot iteration in seconds.",
                     "type": "integer",
                 },
+                "heartbeat_interval": {
+                    "description": (
+                        "Print heartbeat message every N seconds. "
+                        "Set to 0 to disable heartbeat messages."
+                    ),
+                    "type": "integer",
+                    "minimum": 0,
+                },
+                "heartbeat_loglevel": {
+                    "description": (
+                        "Log level for heartbeat messages. Set to 'none' to disable logging."
+                    ),
+                    "type": "string",
+                    "enum": ["info", "debug", "none"],
+                },
                 "interval": {
                     "description": "Interval time in seconds.",
                     "type": "integer",

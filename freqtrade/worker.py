@@ -57,6 +57,11 @@ class Worker:
         internals_config = self._config.get("internals", {})
         self._throttle_secs = internals_config.get("process_throttle_secs", PROCESS_THROTTLE_SECS)
         self._heartbeat_interval = internals_config.get("heartbeat_interval", 60)
+        heartbeat_loglevel = internals_config.get("heartbeat_loglevel", "INFO")
+        heartbeat_loglevel = str(heartbeat_loglevel).lower()
+        if heartbeat_loglevel not in ("info", "debug", "none"):
+            heartbeat_loglevel = "info"
+        self._heartbeat_loglevel = None if heartbeat_loglevel == "none" else heartbeat_loglevel
 
         self._sd_notify = (
             sdnotify.SystemdNotifier()
@@ -128,14 +133,15 @@ class Worker:
                 timeframe_offset=1,
             )
 
-        if self._heartbeat_interval:
+        if self._heartbeat_interval and self._heartbeat_loglevel:
             now = time.time()
             if (now - self._heartbeat_msg) > self._heartbeat_interval:
                 version = __version__
                 strategy_version = self.freqtrade.strategy.version()
                 if strategy_version is not None:
                     version += ", strategy_version: " + strategy_version
-                logger.info(
+                log_func = getattr(logger, self._heartbeat_loglevel)
+                log_func(
                     f"Bot heartbeat. PID={getpid()}, version='{version}', state='{state.name}'"
                 )
                 self._heartbeat_msg = now

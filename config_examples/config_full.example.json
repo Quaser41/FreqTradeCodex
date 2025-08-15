@@ -185,7 +185,8 @@
     "force_entry_enable": false,
     "internals": {
         "process_throttle_secs": 5,
-        "heartbeat_interval": 60
+        "heartbeat_interval": 60,
+        "heartbeat_loglevel": "info"
     },
     "disable_dataframe_checks": false,
     "strategy": "SampleStrategy",
