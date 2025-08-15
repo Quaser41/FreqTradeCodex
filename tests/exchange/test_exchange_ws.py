@@ -5,7 +5,7 @@ from datetime import timedelta
 from time import sleep
 from unittest.mock import AsyncMock, MagicMock
 
-from ccxt import NotSupported
+from ccxt import NetworkError, NotSupported
 
 from freqtrade.enums import CandleType
 from freqtrade.exchange.exchange_ws import ExchangeWS
@@ -223,3 +223,55 @@ async def test_exchangews_get_ohlcv(mocker, caplog):
     assert log_has_re(msg, caplog)
 
     exchange_ws.cleanup()
+
+
+def test_unwatch_ohlcv_networkerror(mocker, caplog):
+    config = MagicMock()
+    ccxt_object = MagicMock()
+    ccxt_object.un_watch_ohlcv_for_symbols = AsyncMock(side_effect=NetworkError("closed"))
+    mocker.patch("freqtrade.exchange.exchange_ws.ExchangeWS._start_forever", MagicMock())
+    caplog.set_level(logging.DEBUG)
+
+    exchange_ws = ExchangeWS(config, ccxt_object)
+    patch_eventloop_threading(exchange_ws)
+    try:
+        fut = asyncio.run_coroutine_threadsafe(
+            exchange_ws._unwatch_ohlcv("ETH/BTC", "1m", CandleType.SPOT),
+            exchange_ws._loop,
+        )
+        fut.result()
+    finally:
+        exchange_ws.cleanup()
+
+    assert not log_has_re("Exception in _unwatch_ohlcv", caplog)
+    assert log_has_re("NetworkError in _unwatch_ohlcv", caplog)
+
+
+def test_exchangews_cleanup_awaits_tasks(mocker):
+    config = MagicMock()
+    ccxt_object = MagicMock()
+
+    async def sleeper(*args, **kwargs):
+        await asyncio.sleep(1)
+
+    ccxt_object.watch_ohlcv = AsyncMock(side_effect=sleeper)
+    ccxt_object.un_watch_ohlcv_for_symbols = AsyncMock()
+    ccxt_object.close = AsyncMock()
+    mocker.patch("freqtrade.exchange.exchange_ws.ExchangeWS._start_forever", MagicMock())
+
+    exchange_ws = ExchangeWS(config, ccxt_object)
+    patch_eventloop_threading(exchange_ws)
+
+    exchange_ws.schedule_ohlcv("ETH/BTC", "1m", CandleType.SPOT)
+
+    async def wait_for_tasks():
+        while not exchange_ws._background_tasks:
+            await asyncio.sleep(0.05)
+
+    asyncio.run_coroutine_threadsafe(wait_for_tasks(), exchange_ws._loop).result()
+    tasks = list(exchange_ws._background_tasks)
+
+    exchange_ws.cleanup()
+
+    assert all(t.done() for t in tasks)
+    assert exchange_ws._background_tasks == set()
