@@ -153,7 +153,8 @@
         "message_size_limit": 8
     },
     "bot_name": "freqtrade",
-    "db_url": "sqlite:///tradesv3.sqlite",
+    "db_url": "sqlite:///tradesv3.dryrun.sqlite",
+    "logfile": "user_data/logs/freqtrade.log",
     "initial_state": "running",
     "force_entry_enable": false,
     "internals": {
