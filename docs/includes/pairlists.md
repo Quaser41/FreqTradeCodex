@@ -543,6 +543,9 @@ To shuffle on every iteration, set `"shuffle_frequency"` to `"iteration"` instea
 
 Removes pairs that have a difference between asks and bids above the specified ratio, `max_spread_ratio` (defaults to `0.005`).
 
+!!! Note
+    During early testing, a higher `max_spread_ratio` (for example `0.01`–`0.02`) or using a `StaticPairList` instead of `SpreadFilter` can keep more pairs available for trading. Wider spreads, however, increase the chance of slippage, meaning orders may fill at less favorable prices.
+
 Example:
 
 If `DOGE/BTC` maximum bid is 0.00000026 and minimum ask is 0.00000027, the ratio is calculated as: `1 - bid/ask ~= 0.037` which is `> 0.005` and this pair will be filtered out.
