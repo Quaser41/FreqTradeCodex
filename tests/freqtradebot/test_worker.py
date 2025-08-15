@@ -257,3 +257,31 @@ def test_worker_heartbeat_stopped(default_conf, mocker, caplog):
     worker._heartbeat_msg -= 70
     worker._worker(old_state=State.STOPPED)
     assert log_has_re(message, caplog)
+
+
+def test_worker_heartbeat_debug(default_conf, mocker, caplog):
+    message = r"Bot heartbeat\. PID=.*state='RUNNING'"
+    default_conf["internals"]["heartbeat_loglevel"] = "debug"
+
+    mock_throttle = MagicMock()
+    mocker.patch("freqtrade.worker.Worker._throttle", mock_throttle)
+    caplog.set_level(logging.DEBUG)
+    worker = get_patched_worker(mocker, default_conf)
+
+    worker.freqtrade.state = State.RUNNING
+    worker._worker(old_state=State.STOPPED)
+    assert log_has_re(message, caplog)
+
+
+def test_worker_heartbeat_disabled(default_conf, mocker, caplog):
+    message = r"Bot heartbeat\. PID=.*state='RUNNING'"
+    default_conf["internals"]["heartbeat_loglevel"] = "none"
+
+    mock_throttle = MagicMock()
+    mocker.patch("freqtrade.worker.Worker._throttle", mock_throttle)
+    caplog.set_level(logging.DEBUG)
+    worker = get_patched_worker(mocker, default_conf)
+
+    worker.freqtrade.state = State.RUNNING
+    worker._worker(old_state=State.STOPPED)
+    assert not log_has_re(message, caplog)
