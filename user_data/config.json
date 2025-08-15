@@ -24,14 +24,6 @@
     "ignore_buying_expired_candle_after": 300,
     "trading_mode": "spot",
     "margin_mode": "",
-    "minimal_roi": {
-        "0": 0.05,
-        "15": 0.03,
-        "30": 0.02,
-        "60": 0.01,
-        "120": 0.0
-    },
-    "stoploss": -0.10,
     "unfilledtimeout": {
         "entry": 10,
         "exit": 10,

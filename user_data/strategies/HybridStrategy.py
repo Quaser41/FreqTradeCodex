@@ -9,9 +9,14 @@ from freqtrade.strategy import IStrategy
 
 
 class HybridStrategy(IStrategy):
-    """EMA crossover with RSI, volume, and TEMA/Bollinger confirmations."""
+    """EMA crossover with RSI, volume, and TEMA/Bollinger confirmations.
+
+    ROI and stoploss are defined within this strategy to keep it self-contained.
+    user_data/config.json should not define these parameters.
+    """
 
     timeframe = "5m"
+    # Minimal ROI mapping.
     minimal_roi = {
         "0": 0.05,
         "15": 0.03,
@@ -19,6 +24,7 @@ class HybridStrategy(IStrategy):
         "60": 0.01,
         "120": 0.0,
     }
+    # Initial stoploss.
     stoploss = -0.10
     process_only_new_candles = True
     startup_candle_count: int = 50
