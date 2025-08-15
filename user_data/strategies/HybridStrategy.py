@@ -1,12 +1,16 @@
 from datetime import datetime
+from typing import Any
 from functools import reduce
+
 
 import pandas_ta as ta
 from pandas import DataFrame
 from technical import qtpylib
 
 from freqtrade.persistence import Trade
+from freqtrade.strategy import IntParameter, IStrategy
 from freqtrade.strategy import BooleanParameter, IntParameter, IStrategy
+
 
 
 class HybridStrategy(IStrategy):
@@ -33,7 +37,15 @@ class HybridStrategy(IStrategy):
     # Initial stoploss.
     stoploss = -0.10
     process_only_new_candles = True
-    startup_candle_count: int = 50
+    _startup_candle_count = IntParameter(20, 50, default=20, space="buy")
+
+    @property
+    def startup_candle_count(self) -> int:
+        return int(self._startup_candle_count.value)
+
+    @startup_candle_count.setter
+    def startup_candle_count(self, value: int) -> None:
+        self._startup_candle_count.value = value
 
     rsi_entry = IntParameter(1, 100, default=50)
     use_volume_filter = BooleanParameter(default=True)
@@ -95,8 +107,9 @@ class HybridStrategy(IStrategy):
         current_time: datetime,
         current_rate: float,
         current_profit: float,
-        **kwargs,
-    ) -> float:
+        after_fill: bool,
+        **kwargs: Any,
+    ) -> float | None:
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         if dataframe is None or dataframe.empty:
             return self.stoploss

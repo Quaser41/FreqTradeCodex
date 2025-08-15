@@ -91,7 +91,15 @@ class {{ strategy }}(IStrategy):
     ignore_roi_if_entry_signal = False
 
     # Number of candles the strategy requires before producing valid signals
-    startup_candle_count: int = 30
+    _startup_candle_count = IntParameter(20, 50, default=20, space="buy")
+
+    @property
+    def startup_candle_count(self) -> int:
+        return int(self._startup_candle_count.value)
+
+    @startup_candle_count.setter
+    def startup_candle_count(self, value: int) -> None:
+        self._startup_candle_count.value = value
 
     # Strategy parameters
     buy_rsi = IntParameter(10, 40, default=30, space="buy")
