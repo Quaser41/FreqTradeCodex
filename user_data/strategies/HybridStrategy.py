@@ -1,6 +1,8 @@
 import talib.abstract as ta
 from pandas import DataFrame
 from technical import qtpylib
+from freqtrade.persistence import Trade
+from datetime import datetime
 
 from freqtrade.strategy import IStrategy
 
@@ -10,9 +12,11 @@ class HybridStrategy(IStrategy):
 
     timeframe = "5m"
     minimal_roi = {
-        "60": 0.01,
+        "0": 0.05,
+        "15": 0.03,
         "30": 0.02,
-        "0": 0.04,
+        "60": 0.01,
+        "120": 0.0,
     }
     stoploss = -0.10
     process_only_new_candles = True
@@ -24,6 +28,7 @@ class HybridStrategy(IStrategy):
         dataframe["rsi"] = ta.RSI(dataframe, timeperiod=14)
         dataframe["volume_sma"] = ta.SMA(dataframe["volume"], timeperiod=20)
         dataframe["tema"] = ta.TEMA(dataframe, timeperiod=9)
+        dataframe["atr"] = ta.ATR(dataframe, timeperiod=14)
         bollinger = qtpylib.bollinger_bands(qtpylib.typical_price(dataframe), window=20, stds=2)
         dataframe["bb_lowerband"] = bollinger["lower"]
         dataframe["bb_middleband"] = bollinger["mid"]
@@ -53,3 +58,23 @@ class HybridStrategy(IStrategy):
             "exit_long",
         ] = 1
         return dataframe
+
+    def custom_stoploss(
+        self,
+        pair: str,
+        trade: Trade,
+        current_time: datetime,
+        current_rate: float,
+        current_profit: float,
+        **kwargs,
+    ) -> float:
+        dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
+        if dataframe is None or dataframe.empty:
+            return self.stoploss
+
+        atr = dataframe["atr"].iloc[-1]
+        if atr is None or current_rate == 0:
+            return self.stoploss
+
+        atr_stop = -atr / current_rate
+        return max(self.stoploss, atr_stop)

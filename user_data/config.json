@@ -13,10 +13,10 @@
     "dry_run_wallet": 1000,
     "cancel_open_orders_on_exit": false,
     "timeframe": "5m",
-    "trailing_stop": false,
-    "trailing_stop_positive": 0.005,
-    "trailing_stop_positive_offset": 0.0051,
-    "trailing_only_offset_is_reached": false,
+    "trailing_stop": true,
+    "trailing_stop_positive": 0.01,
+    "trailing_stop_positive_offset": 0.02,
+    "trailing_only_offset_is_reached": true,
     "use_exit_signal": true,
     "exit_profit_only": false,
     "exit_profit_offset": 0.0,
@@ -25,10 +25,11 @@
     "trading_mode": "spot",
     "margin_mode": "",
     "minimal_roi": {
-        "40":  0.0,
-        "30":  0.01,
-        "20":  0.02,
-        "0":  0.04
+        "0": 0.05,
+        "15": 0.03,
+        "30": 0.02,
+        "60": 0.01,
+        "120": 0.0
     },
     "stoploss": -0.10,
     "unfilledtimeout": {
