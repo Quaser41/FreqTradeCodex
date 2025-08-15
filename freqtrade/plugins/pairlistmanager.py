@@ -163,10 +163,14 @@ class PairListManager(LoggingMixin):
             logger.error(f"Pair blacklist contains an invalid Wildcard: {err}")
             return []
         log_once = partial(self.log_once, logmethod=logmethod)
+        removed_pairs: list[str] = []
         for pair in pairlist.copy():
             if pair in blacklist:
-                log_once(f"Pair {pair} in your blacklist. Removing it from whitelist...")
+                removed_pairs.append(pair)
                 pairlist.remove(pair)
+        if removed_pairs:
+            pairs = ", ".join(sorted(removed_pairs))
+            log_once(f"Removed blacklisted pairs from whitelist: {pairs}")
         return pairlist
 
     def verify_whitelist(

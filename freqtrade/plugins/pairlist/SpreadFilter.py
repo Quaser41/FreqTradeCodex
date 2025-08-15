@@ -5,7 +5,7 @@ Spread pair list filter
 import logging
 
 from freqtrade.exceptions import OperationalException
-from freqtrade.exchange.exchange_types import Ticker
+from freqtrade.exchange.exchange_types import Ticker, Tickers
 from freqtrade.plugins.pairlist.IPairList import IPairList, PairlistParameter, SupportsBacktesting
 
 
@@ -26,6 +26,10 @@ class SpreadFilter(IPairList):
                 f"{self.name} requires exchange to have bid/ask data for tickers, "
                 "which is not available for the selected exchange / trading mode."
             )
+
+        # Lists used to collect removed pairs during a refresh cycle
+        self._removed_spread: list[str] = []
+        self._removed_invalid: list[str] = []
 
     @property
     def needstickers(self) -> bool:
@@ -69,15 +73,37 @@ class SpreadFilter(IPairList):
         if ticker and "bid" in ticker and "ask" in ticker and ticker["ask"] and ticker["bid"]:
             spread = 1 - ticker["bid"] / ticker["ask"]
             if spread > self._max_spread_ratio:
-                self.log_once(
-                    f"Removed {pair} from whitelist, because spread "
-                    f"{spread:.3%} > {self._max_spread_ratio:.3%}",
-                    logger.info,
-                )
+                self._removed_spread.append(pair)
                 return False
             else:
                 return True
-        self.log_once(
-            f"Removed {pair} from whitelist due to invalid ticker data: {ticker}", logger.info
-        )
+        self._removed_invalid.append(pair)
         return False
+
+    def filter_pairlist(self, pairlist: list[str], tickers: Tickers) -> list[str]:
+        """Filters the pairlist and logs a summary of removed pairs."""
+        # Reset removal trackers for this refresh cycle
+        self._removed_spread = []
+        self._removed_invalid = []
+
+        pairlist = super().filter_pairlist(pairlist, tickers)
+
+        if self._removed_spread:
+            pairs = ", ".join(sorted(self._removed_spread))
+            self.log_once(
+                (
+                    f"Removed {len(self._removed_spread)} pairs from whitelist due to high spread: "
+                    f"{pairs}"
+                ),
+                logger.info,
+            )
+        if self._removed_invalid:
+            pairs = ", ".join(sorted(self._removed_invalid))
+            msg = (
+                "Removed "
+                f"{len(self._removed_invalid)} pairs from whitelist due to invalid ticker data: "
+                f"{pairs}"
+            )
+            self.log_once(msg, logger.info)
+
+        return pairlist
