@@ -7,6 +7,7 @@ import pandas as pd
 from datetime import datetime, timedelta, timezone
 from pandas import DataFrame
 from typing import Optional, Union
+from functools import reduce
 
 from freqtrade.strategy import (
     IStrategy,
@@ -97,6 +98,8 @@ class SampleStrategy(IStrategy):
     sell_rsi = IntParameter(low=50, high=100, default=70, space="sell", optimize=True, load=True)
     short_rsi = IntParameter(low=51, high=100, default=70, space="sell", optimize=True, load=True)
     exit_short_rsi = IntParameter(low=1, high=50, default=30, space="buy", optimize=True, load=True)
+    volume_filter_enabled = BooleanParameter(default=True, space="buy", optimize=True, load=True)
+    tema_bollinger_enabled = BooleanParameter(default=True, space="buy", optimize=True, load=True)
 
     # Number of candles the strategy requires before producing valid signals
     _startup_candle_count = IntParameter(20, 50, default=20, space="buy")
@@ -376,27 +379,39 @@ class SampleStrategy(IStrategy):
         :param metadata: Additional information, like the currently traded pair
         :return: DataFrame with entry columns populated
         """
-        dataframe.loc[
-            (
-                # Signal: RSI crosses above 30
-                (qtpylib.crossed_above(dataframe["rsi"], self.buy_rsi.value))
-                & (dataframe["tema"] <= dataframe["bb_middleband"])  # Guard: tema below BB middle
-                & (dataframe["tema"] > dataframe["tema"].shift(1))  # Guard: tema is raising
-                & (dataframe["volume"] > 0)  # Make sure Volume is not 0
-            ),
-            "enter_long",
-        ] = 1
+        long_conditions = [
+            qtpylib.crossed_above(dataframe["rsi"], self.buy_rsi.value)
+        ]
 
-        dataframe.loc[
-            (
-                # Signal: RSI crosses above 70
-                (qtpylib.crossed_above(dataframe["rsi"], self.short_rsi.value))
-                & (dataframe["tema"] > dataframe["bb_middleband"])  # Guard: tema above BB middle
-                & (dataframe["tema"] < dataframe["tema"].shift(1))  # Guard: tema is falling
-                & (dataframe["volume"] > 0)  # Make sure Volume is not 0
-            ),
-            "enter_short",
-        ] = 1
+        if self.tema_bollinger_enabled.value:
+            long_conditions.append(dataframe["tema"] <= dataframe["bb_middleband"])
+            long_conditions.append(dataframe["tema"] > dataframe["tema"].shift(1))
+
+        if self.volume_filter_enabled.value:
+            long_conditions.append(dataframe["volume"] > 0)
+
+        if long_conditions:
+            dataframe.loc[
+                reduce(lambda x, y: x & y, long_conditions),
+                "enter_long",
+            ] = 1
+
+        short_conditions = [
+            qtpylib.crossed_above(dataframe["rsi"], self.short_rsi.value)
+        ]
+
+        if self.tema_bollinger_enabled.value:
+            short_conditions.append(dataframe["tema"] > dataframe["bb_middleband"])
+            short_conditions.append(dataframe["tema"] < dataframe["tema"].shift(1))
+
+        if self.volume_filter_enabled.value:
+            short_conditions.append(dataframe["volume"] > 0)
+
+        if short_conditions:
+            dataframe.loc[
+                reduce(lambda x, y: x & y, short_conditions),
+                "enter_short",
+            ] = 1
 
         return dataframe
 
@@ -407,28 +422,38 @@ class SampleStrategy(IStrategy):
         :param metadata: Additional information, like the currently traded pair
         :return: DataFrame with exit columns populated
         """
-        dataframe.loc[
-            (
-                # Signal: RSI crosses above 70
-                (qtpylib.crossed_above(dataframe["rsi"], self.sell_rsi.value))
-                & (dataframe["tema"] > dataframe["bb_middleband"])  # Guard: tema above BB middle
-                & (dataframe["tema"] < dataframe["tema"].shift(1))  # Guard: tema is falling
-                & (dataframe["volume"] > 0)  # Make sure Volume is not 0
-            ),
-            "exit_long",
-        ] = 1
+        long_conditions = [
+            qtpylib.crossed_above(dataframe["rsi"], self.sell_rsi.value)
+        ]
 
-        dataframe.loc[
-            (
-                # Signal: RSI crosses above 30
-                (qtpylib.crossed_above(dataframe["rsi"], self.exit_short_rsi.value))
-                &
-                # Guard: tema below BB middle
-                (dataframe["tema"] <= dataframe["bb_middleband"])
-                & (dataframe["tema"] > dataframe["tema"].shift(1))  # Guard: tema is raising
-                & (dataframe["volume"] > 0)  # Make sure Volume is not 0
-            ),
-            "exit_short",
-        ] = 1
+        if self.tema_bollinger_enabled.value:
+            long_conditions.append(dataframe["tema"] > dataframe["bb_middleband"])
+            long_conditions.append(dataframe["tema"] < dataframe["tema"].shift(1))
+
+        if self.volume_filter_enabled.value:
+            long_conditions.append(dataframe["volume"] > 0)
+
+        if long_conditions:
+            dataframe.loc[
+                reduce(lambda x, y: x & y, long_conditions),
+                "exit_long",
+            ] = 1
+
+        short_conditions = [
+            qtpylib.crossed_above(dataframe["rsi"], self.exit_short_rsi.value)
+        ]
+
+        if self.tema_bollinger_enabled.value:
+            short_conditions.append(dataframe["tema"] <= dataframe["bb_middleband"])
+            short_conditions.append(dataframe["tema"] > dataframe["tema"].shift(1))
+
+        if self.volume_filter_enabled.value:
+            short_conditions.append(dataframe["volume"] > 0)
+
+        if short_conditions:
+            dataframe.loc[
+                reduce(lambda x, y: x & y, short_conditions),
+                "exit_short",
+            ] = 1
 
         return dataframe
