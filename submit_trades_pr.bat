@@ -15,6 +15,9 @@ where gh  >nul 2>&1 || (echo GitHub CLI not found & pause & exit /b)
 
 git checkout -B "%BRANCH%" || (echo Failed to checkout branch & pause & exit /b 1)
 
+git config user.name "B A"        || (echo Failed to set git user name & pause & exit /b 1)
+git config user.email "b.a@idont.com" || (echo Failed to set git user email & pause & exit /b 1)
+
 dir %FILE_PATTERN% >nul 2>&1 || (echo No SQLite files found & pause & exit /b)
 
 for %%F in (%FILE_PATTERN%) do (
