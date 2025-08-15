@@ -1,9 +1,10 @@
-import talib.abstract as ta
-from pandas import DataFrame
-from technical import qtpylib
-from freqtrade.persistence import Trade
 from datetime import datetime
 
+import pandas_ta as ta
+from pandas import DataFrame
+from technical import qtpylib
+
+from freqtrade.persistence import Trade
 from freqtrade.strategy import IStrategy
 
 
@@ -23,12 +24,17 @@ class HybridStrategy(IStrategy):
     startup_candle_count: int = 50
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        dataframe["ema_fast"] = ta.EMA(dataframe, timeperiod=5)
-        dataframe["ema_slow"] = ta.EMA(dataframe, timeperiod=20)
-        dataframe["rsi"] = ta.RSI(dataframe, timeperiod=14)
-        dataframe["volume_sma"] = ta.SMA(dataframe["volume"], timeperiod=20)
-        dataframe["tema"] = ta.TEMA(dataframe, timeperiod=9)
-        dataframe["atr"] = ta.ATR(dataframe, timeperiod=14)
+        dataframe["ema_fast"] = ta.ema(dataframe["close"], length=5)
+        dataframe["ema_slow"] = ta.ema(dataframe["close"], length=20)
+        dataframe["rsi"] = ta.rsi(dataframe["close"], length=14)
+        dataframe["volume_sma"] = dataframe["volume"].rolling(window=20).mean()
+        dataframe["tema"] = ta.tema(dataframe["close"], length=9)
+        dataframe["atr"] = ta.atr(
+            high=dataframe["high"],
+            low=dataframe["low"],
+            close=dataframe["close"],
+            length=14,
+        )
         bollinger = qtpylib.bollinger_bands(qtpylib.typical_price(dataframe), window=20, stds=2)
         dataframe["bb_lowerband"] = bollinger["lower"]
         dataframe["bb_middleband"] = bollinger["mid"]
