@@ -1,14 +1,12 @@
 from datetime import datetime
-from typing import Any
 from functools import reduce
-
+from typing import Any
 
 import pandas_ta as ta
 from pandas import DataFrame
 from technical import qtpylib
 
 from freqtrade.persistence import Trade
-from freqtrade.strategy import IntParameter, IStrategy
 from freqtrade.strategy import BooleanParameter, IntParameter, IStrategy
 
 
