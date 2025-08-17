@@ -1,6 +1,7 @@
 from datetime import datetime
 from functools import reduce
 from typing import Any
+import logging
 
 import pandas_ta as ta
 from pandas import DataFrame
@@ -8,6 +9,8 @@ from technical import qtpylib
 
 from freqtrade.persistence import Trade
 from freqtrade.strategy import BooleanParameter, IntParameter, IStrategy
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -96,6 +99,22 @@ class HybridStrategy(IStrategy):
             ),
             "exit_long",
         ] = 1
+        return dataframe
+
+    def populate_buy_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        """Legacy wrapper for buy signals with debug logging."""
+        dataframe = self.populate_entry_trend(dataframe, metadata)
+        dataframe["buy"] = dataframe.get("enter_long", 0)
+        signal_count = int(dataframe["buy"].sum())
+        logger.debug("populate_buy_trend produced %s buy signals for %s", signal_count, metadata.get("pair"))
+        return dataframe
+
+    def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        """Legacy wrapper for sell signals with debug logging."""
+        dataframe = self.populate_exit_trend(dataframe, metadata)
+        dataframe["sell"] = dataframe.get("exit_long", 0)
+        signal_count = int(dataframe["sell"].sum())
+        logger.debug("populate_sell_trend produced %s sell signals for %s", signal_count, metadata.get("pair"))
         return dataframe
 
     def custom_stoploss(
