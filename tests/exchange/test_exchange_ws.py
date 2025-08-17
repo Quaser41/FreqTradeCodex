@@ -229,11 +229,21 @@ def test_unwatch_ohlcv_networkerror(mocker, caplog):
     config = MagicMock()
     ccxt_object = MagicMock()
     ccxt_object.un_watch_ohlcv_for_symbols = AsyncMock(side_effect=NetworkError("closed"))
+    ccxt_object.close = AsyncMock(side_effect=[NetworkError("fail"), None, None])
     mocker.patch("freqtrade.exchange.exchange_ws.ExchangeWS._start_forever", MagicMock())
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.INFO)
 
     exchange_ws = ExchangeWS(config, ccxt_object)
     patch_eventloop_threading(exchange_ws)
+
+    # Add one active pair to ensure resubscription happens
+    exchange_ws._klines_watching.add(("XRP/BTC", "1m", CandleType.SPOT))
+
+    schedule_mock = AsyncMock()
+    mocker.patch.object(exchange_ws, "_schedule_while_true", schedule_mock)
+    sleep_mock = AsyncMock()
+    mocker.patch("asyncio.sleep", sleep_mock)
+
     try:
         fut = asyncio.run_coroutine_threadsafe(
             exchange_ws._unwatch_ohlcv("ETH/BTC", "1m", CandleType.SPOT),
@@ -243,8 +253,11 @@ def test_unwatch_ohlcv_networkerror(mocker, caplog):
     finally:
         exchange_ws.cleanup()
 
-    assert not log_has_re("Exception in _unwatch_ohlcv", caplog)
     assert log_has_re("NetworkError in _unwatch_ohlcv", caplog)
+    assert log_has_re("Reconnecting websocket", caplog)
+    schedule_mock.assert_awaited_once()
+    assert ccxt_object.close.await_count >= 2
+    sleep_mock.assert_awaited_once()
 
 
 def test_exchangews_cleanup_awaits_tasks(mocker):

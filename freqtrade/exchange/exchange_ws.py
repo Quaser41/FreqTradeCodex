@@ -154,14 +154,43 @@ class ExchangeWS:
                     )
                 )
 
+    async def _reconnect_ws(self) -> None:
+        """Reconnect websocket connection and restore subscriptions."""
+        active_pairs = list(self._klines_watching)
+        delay = 1
+        for attempt in range(5):
+            logger.info("Reconnecting websocket (attempt %s)", attempt + 1)
+            try:
+                await self._ccxt_object.close()
+                break
+            except ccxt.NetworkError as e:
+                logger.warning(
+                    "Reconnection attempt %s failed: %s - retrying in %ss",
+                    attempt + 1,
+                    e,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+                delay *= 2
+        else:
+            logger.error("Maximum websocket reconnection attempts reached.")
+            return
+
+        self._klines_scheduled.clear()
+        if active_pairs:
+            logger.info("Restoring subscriptions to %s pairs.", len(active_pairs))
+        for p in active_pairs:
+            self._klines_watching.add(p)
+        await self._schedule_while_true()
+
     async def _unwatch_ohlcv(self, pair: str, timeframe: str, candle_type: CandleType) -> None:
         try:
             await self._ccxt_object.un_watch_ohlcv_for_symbols([[pair, timeframe]])
         except ccxt.NotSupported as e:
             logger.debug("un_watch_ohlcv_for_symbols not supported: %s", e)
         except ccxt.NetworkError as e:
-            # Connection already closing - no need to escalate
-            logger.debug("NetworkError in _unwatch_ohlcv: %s", e)
+            logger.warning("NetworkError in _unwatch_ohlcv: %s", e)
+            await self._reconnect_ws()
         except Exception:
             logger.exception("Exception in _unwatch_ohlcv")
 
