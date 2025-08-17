@@ -1,7 +1,7 @@
+import logging
 from datetime import datetime
 from functools import reduce
 from typing import Any
-import logging
 
 import pandas_ta as ta
 from pandas import DataFrame
@@ -10,17 +10,17 @@ from technical import qtpylib
 from freqtrade.persistence import Trade
 from freqtrade.strategy import BooleanParameter, IntParameter, IStrategy
 
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 
 
 class HybridStrategy(IStrategy):
     """EMA crossover with optional RSI, volume, and TEMA/Bollinger confirmations.
 
     Parameters:
-        rsi_entry: RSI threshold for entries. Default: 50.
-        use_volume_filter: Enable volume moving-average filter. Default: True.
-        use_tema_bband: Require TEMA below Bollinger mid-band and rising. Default: True.
+        rsi_entry: RSI threshold for entries. Default: 60.
+        use_volume_filter: Enable volume moving-average filter. Default: False.
+        use_tema_bband: Require TEMA below Bollinger mid-band and rising. Default: False.
 
     ROI and stoploss are defined within this strategy to keep it self-contained.
     user_data/config.json should not define these parameters.
@@ -48,9 +48,9 @@ class HybridStrategy(IStrategy):
     def startup_candle_count(self, value: int) -> None:
         self._startup_candle_count.value = value
 
-    rsi_entry = IntParameter(1, 100, default=50)
-    use_volume_filter = BooleanParameter(default=True)
-    use_tema_bband = BooleanParameter(default=True)
+    rsi_entry = IntParameter(1, 100, default=60)
+    use_volume_filter = BooleanParameter(default=False)
+    use_tema_bband = BooleanParameter(default=False)
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe["ema_fast"] = ta.ema(dataframe["close"], length=5)
@@ -106,7 +106,9 @@ class HybridStrategy(IStrategy):
         dataframe = self.populate_entry_trend(dataframe, metadata)
         dataframe["buy"] = dataframe.get("enter_long", 0)
         signal_count = int(dataframe["buy"].sum())
-        logger.debug("populate_buy_trend produced %s buy signals for %s", signal_count, metadata.get("pair"))
+        logger.debug(
+            "populate_buy_trend produced %s buy signals for %s", signal_count, metadata.get("pair")
+        )
         return dataframe
 
     def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
@@ -114,7 +116,11 @@ class HybridStrategy(IStrategy):
         dataframe = self.populate_exit_trend(dataframe, metadata)
         dataframe["sell"] = dataframe.get("exit_long", 0)
         signal_count = int(dataframe["sell"].sum())
-        logger.debug("populate_sell_trend produced %s sell signals for %s", signal_count, metadata.get("pair"))
+        logger.debug(
+            "populate_sell_trend produced %s sell signals for %s",
+            signal_count,
+            metadata.get("pair"),
+        )
         return dataframe
 
     def custom_stoploss(
