@@ -50,6 +50,7 @@ class ExchangeWS:
 
         if hasattr(self, "_loop") and not self._loop.is_closed():
             if tasks:
+
                 async def _wait_tasks() -> None:
                     await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -184,15 +185,48 @@ class ExchangeWS:
         await self._schedule_while_true()
 
     async def _unwatch_ohlcv(self, pair: str, timeframe: str, candle_type: CandleType) -> None:
+        delay = 1
+        retries = 3
+        for attempt in range(1, retries + 1):
+            try:
+                await self._ccxt_object.un_watch_ohlcv_for_symbols([[pair, timeframe]])
+                return
+            except ccxt.NotSupported as e:
+                logger.debug("un_watch_ohlcv_for_symbols not supported: %s", e)
+                return
+            except ccxt.NetworkError as e:
+                logger.warning(
+                    "NetworkError in _unwatch_ohlcv for %s %s (attempt %s/%s): %s",
+                    pair,
+                    timeframe,
+                    attempt,
+                    retries,
+                    e,
+                )
+                await self._reconnect_ws()
+            except Exception:
+                logger.exception(
+                    "Exception in _unwatch_ohlcv for %s %s (attempt %s/%s)",
+                    pair,
+                    timeframe,
+                    attempt,
+                    retries,
+                )
+            await asyncio.sleep(delay)
+            delay *= 2
+
+        logger.error(
+            "Failed to unsubscribe %s %s after %s attempts, falling back to REST polling.",
+            pair,
+            timeframe,
+            retries,
+        )
         try:
-            await self._ccxt_object.un_watch_ohlcv_for_symbols([[pair, timeframe]])
-        except ccxt.NotSupported as e:
-            logger.debug("un_watch_ohlcv_for_symbols not supported: %s", e)
-        except ccxt.NetworkError as e:
-            logger.warning("NetworkError in _unwatch_ohlcv: %s", e)
-            await self._reconnect_ws()
+            await self._ccxt_object.fetch_ohlcv(pair, timeframe)
+            logger.info("Fetched latest candles via REST for %s %s", pair, timeframe)
         except Exception:
-            logger.exception("Exception in _unwatch_ohlcv")
+            logger.exception("Failed REST polling fallback for %s %s", pair, timeframe)
+        await self._reconnect_ws()
 
     def _continuous_stopped(
         self, task: asyncio.Task, pair: str, timeframe: str, candle_type: CandleType

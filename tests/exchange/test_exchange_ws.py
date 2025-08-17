@@ -229,18 +229,15 @@ def test_unwatch_ohlcv_networkerror(mocker, caplog):
     config = MagicMock()
     ccxt_object = MagicMock()
     ccxt_object.un_watch_ohlcv_for_symbols = AsyncMock(side_effect=NetworkError("closed"))
-    ccxt_object.close = AsyncMock(side_effect=[NetworkError("fail"), None, None])
+    ccxt_object.fetch_ohlcv = AsyncMock()
     mocker.patch("freqtrade.exchange.exchange_ws.ExchangeWS._start_forever", MagicMock())
     caplog.set_level(logging.INFO)
 
     exchange_ws = ExchangeWS(config, ccxt_object)
     patch_eventloop_threading(exchange_ws)
 
-    # Add one active pair to ensure resubscription happens
-    exchange_ws._klines_watching.add(("XRP/BTC", "1m", CandleType.SPOT))
-
-    schedule_mock = AsyncMock()
-    mocker.patch.object(exchange_ws, "_schedule_while_true", schedule_mock)
+    reconnect_mock = AsyncMock()
+    mocker.patch.object(exchange_ws, "_reconnect_ws", reconnect_mock)
     sleep_mock = AsyncMock()
     mocker.patch("asyncio.sleep", sleep_mock)
 
@@ -254,10 +251,11 @@ def test_unwatch_ohlcv_networkerror(mocker, caplog):
         exchange_ws.cleanup()
 
     assert log_has_re("NetworkError in _unwatch_ohlcv", caplog)
-    assert log_has_re("Reconnecting websocket", caplog)
-    schedule_mock.assert_awaited_once()
-    assert ccxt_object.close.await_count >= 2
-    sleep_mock.assert_awaited_once()
+    assert log_has_re("Failed to unsubscribe", caplog)
+    assert ccxt_object.un_watch_ohlcv_for_symbols.await_count == 3
+    ccxt_object.fetch_ohlcv.assert_awaited_once()
+    assert reconnect_mock.await_count >= 1
+    assert sleep_mock.await_count == 3
 
 
 def test_exchangews_cleanup_awaits_tasks(mocker):
@@ -278,7 +276,7 @@ def test_exchangews_cleanup_awaits_tasks(mocker):
     exchange_ws.schedule_ohlcv("ETH/BTC", "1m", CandleType.SPOT)
 
     async def wait_for_tasks():
-        while not exchange_ws._background_tasks:
+        while not exchange_ws._background_tasks:  # noqa: ASYNC110
             await asyncio.sleep(0.05)
 
     asyncio.run_coroutine_threadsafe(wait_for_tasks(), exchange_ws._loop).result()
